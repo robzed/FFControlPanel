@@ -13,13 +13,14 @@ class TerminalWindow():
     '''
 
 
-    def __init__(self, window):
+    def __init__(self, window, EOL='\n\r'):
         '''
         Constructor
         '''
         self.termWindow = window
         self._callback_function = None
-
+        self.EOL = EOL
+        
         window.title("FFControlPanel - Terminal")
         
 
@@ -44,24 +45,25 @@ class TerminalWindow():
     
         self.entry.focus_set()
     
-    def status(self, status_text):
+    def set_status(self, status_text):
         self.label_status.config(text="Terminal - " + status_text)
 
-    def set_callback(self, function):
+    def set_data_ready_callback(self, function):
         self._callback_function = function
-                
+    
     def _pressed_return(self, _):    # parameter event not used
-        text = self.entry.get()
+        text = self.entry.get() + self.EOL
         if self._callback_function is None:
             self.append(text)
         else:
-            self._callback_function(text)
+            self._callback_function(text.encode('utf-8'))
             
         self.entry.delete(0, tk.END)
         
     def append(self, text):
         self.textw.config(state=tk.NORMAL)
-        self.textw.insert(tk.END, text+'\n')
+        self.textw.insert(tk.END, text)
+        self.textw.see(tk.END)
         self.textw.config(state=tk.DISABLED)
     
     

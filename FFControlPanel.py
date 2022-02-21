@@ -11,6 +11,8 @@ from CP_Lib.terminal_window import TerminalWindow
 
 import time
 import tkinter as tk
+import platform
+print(platform.python_version())
 
 # Bleak/Asyncio and tkInter
 # https://stackoverflow.com/questions/47895765/use-asyncio-and-tkinter-or-another-gui-lib-together-without-freezing-the-gui
@@ -25,7 +27,7 @@ import tkinter as tk
 #    global term
 #    global root
 #    term = TerminalWindow(tk.Toplevel(root))
-   
+
     
 def main():
     global root
@@ -39,22 +41,20 @@ def main():
     #start_button.pack(pady = 5, padx = 5)
     #root.geometry("400x100")
     #root.title("FFControlPanel - Select Connection")
-    root.mainloop()
-
-        
+    
     connection = BLE_Serial()
     connection.open()
-    
-    print("Waiting for thread")
-    
-    while connection.connected == False:
-        time.sleep(0.1)
-    print("Connected")
-    
-    connection.send_data(b"Hello")
-    time.sleep(1)
-    print(connection.rx_data())
-    
+    term.set_data_ready_callback(connection.send_data)
+
+    def rx_glue():
+        data = connection.rx_data()
+        if data is not None:
+            term.append(data.decode('utf-8').replace('\r\n', '\n'))
+        root.after(50, rx_glue)
+        
+    root.after(50, rx_glue)
+    root.mainloop()
+        
     print("Finished")
     
 if __name__ == '__main__':

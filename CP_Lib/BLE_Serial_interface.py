@@ -19,7 +19,7 @@ from bleak.backends.device import BLEDevice
 # https://stackoverflow.com/questions/69661809/no-name-or-address-cbcentralmanager-no-longer-working-on-macos-12
 
 DEBUG_BLE = False
-
+DEBUG_SHOW_DATA = False
 
 class BLE_Serial(object):
     '''
@@ -70,7 +70,7 @@ class BLE_Serial(object):
     
     def _notification_handler(self, sender, data):
         """Simple notification handler which prints the data received."""
-        print("{0}: {1}".format(sender, data))
+        if DEBUG_SHOW_DATA: print("RX {0}: {1}".format(sender, data))
         self.receive_queue.append(data)
 
     def _device_discovered(self, device: BLEDevice, advertisement_data: AdvertisementData):
@@ -111,11 +111,11 @@ class BLE_Serial(object):
      
                 # give some time to do other tasks, 50ms = 25x a second
                 await asyncio.sleep(0.40)
- 
                 while(len(self.send_queue)):
                     data = self.send_queue.popleft()
-                    await client.write_gatt_char(self.UART_TX_UUID_128, data)
-     
+                    if DEBUG_SHOW_DATA: print("TX:", data)
+                    await client.write_gatt_char(self.UART_TX_UUID_128, data, True)
+
                     #data = await client.read_gatt_char(self.UART_RX_UUID)
                 self.data_send = True
                 
@@ -129,11 +129,12 @@ class BLE_Serial(object):
         self.thread.start()
         
     def send_data(self, data):
-        self.data_send = False
-        self.send_queue.append(data)
-    
+        if len(data):
+            self.data_send = False
+            self.send_queue.append(data)
+
     def rx_data(self):
         try:
             return self.receive_queue.popleft()
         except IndexError:
-            return b""
+            return None
