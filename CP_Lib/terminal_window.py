@@ -24,8 +24,8 @@ class TerminalWindow():
         window.title("FFControlPanel - Terminal")
         
 
-        label_status = tk.Label(window, text = "Terminal")
-        label_status.pack(side = tk.TOP)
+        self.label_status = tk.Label(window, text = "Terminal")
+        self.label_status.pack(side = tk.TOP)
 
         self.textw = tk.Text (window, bg='DarkSeaGreen1')
         self.textw.pack(side=tk.TOP, fill=tk.BOTH, expand = True)
@@ -44,9 +44,11 @@ class TerminalWindow():
         self.entry.bind('<Return>', self._pressed_return)
     
         self.entry.focus_set()
-    
+        self.old_status = None
+
     def set_status(self, status_text):
-        self.label_status.config(text="Terminal - " + status_text)
+        if self.old_status != status_text:
+            self.label_status.config(text="Terminal - " + status_text)
 
     def set_data_ready_callback(self, function):
         self._callback_function = function

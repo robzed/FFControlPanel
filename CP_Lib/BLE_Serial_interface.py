@@ -48,6 +48,7 @@ class BLE_Serial(object):
         self.connected = False
         self.terminate = False
         self.data_send = False
+        self._status = "Idle"
 
     def make_Nordic_Uart_Service(self):
         self.UART_SERVICE_UUID = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -81,13 +82,14 @@ class BLE_Serial(object):
 
     async def _run(self):
         if DEBUG_BLE: print("Running BLE controller")
-    
+
         #  mkoderer commented on 30 Dec 2021 on https://github.com/hbldh/bleak/issues/635
         # https://github.com/hbldh/bleak/blob/develop/examples/detection_callback.py
         service_uuids = [ self.UART_SERVICE_UUID ]
         scanner = BleakScanner(service_uuids=service_uuids)
         scanner.register_detection_callback(self._device_discovered)
     
+        self._status = "Searching"
         while self.found_device is None:
             await scanner.start()
             # wait for 5 seconds total
@@ -96,6 +98,7 @@ class BLE_Serial(object):
                 if self.found_device is not None:
                     break
             await scanner.stop()
+        self._status = "Connecting"
     
         print("Found", self.wanted_name, "at", self.found_device.address)
 
@@ -107,6 +110,7 @@ class BLE_Serial(object):
             await client.start_notify(self.UART_RX_UUID_128, self._notification_handler)
          
             self.connected = True
+            self._status = "Connected"
             while self.terminate == False: 
      
                 # give some time to do other tasks, 50ms = 25x a second
@@ -118,7 +122,11 @@ class BLE_Serial(object):
 
                     #data = await client.read_gatt_char(self.UART_RX_UUID)
                 self.data_send = True
-                
+
+            self._status = "Disconnecting"
+            client.disconnect()
+            self._status = "Idle"
+            
     def _asyncio_main(self):
         # Python 3.7+
         # https://stackoverflow.com/questions/55590343/asyncio-run-or-run-until-complete
@@ -138,3 +146,7 @@ class BLE_Serial(object):
             return self.receive_queue.popleft()
         except IndexError:
             return None
+
+    def status(self):
+        return self._status
+        
