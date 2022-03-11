@@ -57,17 +57,22 @@ class Main:
                 self.term.append(repr(expr))
         except SyntaxError:
             self.term.append("#python: Syntax Error\n")
-            
+
     def cd(self, _, path):
+        if path.strip() == "":
+            self.term.append("#cd: %s \n" % os.getcwd())
+            return
         try:
             os.chdir(path.rstrip())
+            self.term.append("#cd: %s\n" % os.getcwd())
         except FileNotFoundError:
             self.term.append("#cd: Folder not found\n")
             
     def ls(self, cmd, arg):
+        self.term.append("#ls: %s\n" % os.getcwd())
         dir_list = os.listdir(".")
         for dtext in dir_list:
-            self.term.append(dtext+'\n')
+            self.term.append('  | '+dtext+'\n')
 
     def help(self, command, _):
         self.help_window = HelpWindow(self.root, self.local_commands)
@@ -100,14 +105,16 @@ class Main:
     
         def send_data_handler(data):
             items = data.split(maxsplit=1) 
-            if len(items) >= 2:
-                command, payload = items
-            else:
-                command = items[0]
-                payload = ""
-            if command in self.local_commands:
-                self.run_local_command(command, payload)
-            elif connection.connected:
+            if len(items):
+                if len(items) >= 2:
+                    command, payload = items
+                else:
+                    command = items[0]
+                    payload = ""
+                if command in self.local_commands:
+                    self.run_local_command(command, payload)
+                    return
+            if connection.connected:
                 connection.send_data(data)
             
         self.term.set_data_ready_callback(send_data_handler)
