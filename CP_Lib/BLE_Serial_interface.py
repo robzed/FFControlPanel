@@ -62,6 +62,7 @@ class BLE_Serial(object):
         self.UART_RX_UUID = "FFE1"
         self.UART_RX_UUID_128 = "0000ffe1-0000-1000-8000-00805f9b34fb"
         self.UART_TX_UUID_128 = "0000ffe1-0000-1000-8000-00805f9b34fb"
+        self.chunk_len = 20
 
     def make_HM19(self):
         pass
@@ -89,43 +90,53 @@ class BLE_Serial(object):
         scanner = BleakScanner(service_uuids=service_uuids)
         scanner.register_detection_callback(self._device_discovered)
     
-        self._status = "Searching"
-        while self.found_device is None:
-            await scanner.start()
-            # wait for 5 seconds total
-            for _ in range(100):
-                await asyncio.sleep(0.05)
-                if self.found_device is not None:
-                    break
-            await scanner.stop()
-        self._status = "Connecting"
+        while self.terminate == False:
+            self._status = "Searching"
+            while self.found_device is None:
+                await scanner.start()
+                # wait for 5 seconds total
+                for _ in range(100):
+                    await asyncio.sleep(0.05)
+                    if self.found_device is not None:
+                        break
+                await scanner.stop()
+            self._status = "Connecting"
+        
+            print("Found", self.wanted_name, "at", self.found_device.address)
     
-        print("Found", self.wanted_name, "at", self.found_device.address)
-
-        # Get services 
-        # https://github.com/hbldh/bleak/blob/develop/examples/get_services.py
-        async with BleakClient(self.found_device) as client:
+            def disconnected_callback(client):
+                print("Disconnected callback called!")
+                self._status = "Disconnected"
+                self.connected = False
+                
+            # Get services 
+            # https://github.com/hbldh/bleak/blob/develop/examples/get_services.py
+            async with BleakClient(self.found_device, disconnected_callback=disconnected_callback) as client:
+        
+                # wait for data to be sent from client
+                await client.start_notify(self.UART_RX_UUID_128, self._notification_handler)
     
-            # wait for data to be sent from client
-            await client.start_notify(self.UART_RX_UUID_128, self._notification_handler)
+                self.connected = True
+                self._status = "Connected"
+                while self.terminate == False and self.connected == True: 
          
-            self.connected = True
-            self._status = "Connected"
-            while self.terminate == False: 
-     
-                # give some time to do other tasks, 50ms = 25x a second
-                await asyncio.sleep(0.40)
-                while(len(self.send_queue)):
-                    data = self.send_queue.popleft()
-                    if DEBUG_SHOW_DATA: print("TX:", data)
-                    await client.write_gatt_char(self.UART_TX_UUID_128, data, True)
-
-                    #data = await client.read_gatt_char(self.UART_RX_UUID)
-                self.data_send = True
-
-            self._status = "Disconnecting"
-            client.disconnect()
-            self._status = "Idle"
+                    # give some time to do other tasks, 50ms = 25x a second
+                    await asyncio.sleep(0.40)
+                    while(len(self.send_queue)):
+                        data = self.send_queue.popleft()
+                        if DEBUG_SHOW_DATA: print("TX:", data)
+                        chunks = [data[i:i+self.chunk_len] for i in range(0, len(data), self.chunk_len)]
+                        for chunk in chunks:
+                            print("Chunk", chunk)
+                            await client.write_gatt_char(self.UART_TX_UUID_128, chunk, True)
+    
+                        #data = await client.read_gatt_char(self.UART_RX_UUID)
+                    self.data_send = True
+    
+                if self.connected:
+                    self._status = "Disconnecting"
+                    client.disconnect()
+                self._status = "Idle"
             
     def _asyncio_main(self):
         # Python 3.7+
