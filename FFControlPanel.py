@@ -12,7 +12,7 @@ import tkinter as tk
 import platform
 from CP_Lib.help_window import HelpWindow
 import os
-from Remote_End_Interpreters.flashforth_interpreter import FlashForth_interpreter
+from Remote_End_Analyser.flashforth_interpreter import FlashForth_interpreter
 
 print(platform.python_version())
 
@@ -23,6 +23,7 @@ print(platform.python_version())
 #
 # Since we might be using serial ports (or serial ports over classic Bluetooth) 
 # with this code, we try to abstract the connection. 
+
 
 class Main:
 
