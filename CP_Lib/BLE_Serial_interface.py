@@ -120,8 +120,8 @@ class BLE_Serial(object):
                 self._status = "Connected"
                 while self.terminate == False and self.connected == True: 
          
-                    # give some time to do other tasks, 50ms = 25x a second
-                    await asyncio.sleep(0.40)
+                    # give some time to do other tasks, 40ms = 25x a second
+                    await asyncio.sleep(0.04)
                     while(len(self.send_queue)):
                         data = self.send_queue.popleft()
                         if DEBUG_SHOW_DATA: print("TX:", data)

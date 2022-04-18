@@ -46,6 +46,12 @@ class TerminalWindow():
         self.entry.focus_set()
         self.old_status = None
 
+    def disable_input_terminal(self):
+        self.entry.config(state='disabled') # OR entry['state'] = 'disabled'
+    
+    def enable_input_terminal(self):
+        self.entry.config(state='normal')
+    
     def set_status(self, status_text):
         if self.old_status != status_text:
             self.label_status.config(text="Terminal - " + status_text)
@@ -54,15 +60,18 @@ class TerminalWindow():
         self._callback_function = function
     
     def _pressed_return(self, _):    # parameter event not used
-        text = self.entry.get() + self.EOL
-        if self._callback_function is None:
-            self.append(text)
-        else:
-            self._callback_function(text.encode('utf-8'))
+        texts = self.entry.get().splitlines()
+        for text in texts:
+            text += self.EOL
+            if self._callback_function is None:
+                self.append(text)
+            else:
+                self._callback_function(text.encode('utf-8'))
             
         self.entry.delete(0, tk.END)
         
     def append(self, text):
+        # @TODO: Make control characters visibie (e.g. 0-31 except NL, LF)
         self.textw.config(state=tk.NORMAL)
         self.textw.insert(tk.END, text)
         self.textw.see(tk.END)
